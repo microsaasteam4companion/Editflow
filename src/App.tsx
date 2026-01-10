@@ -13,6 +13,8 @@ import { useTheme } from "@/hooks/useTheme";
 
 const queryClient = new QueryClient();
 
+import PaymentSuccess from "@/pages/PaymentSuccess";
+
 const App = () => {
   useTheme(); // Initialize theme globally
 
@@ -27,6 +29,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/planner" element={<Planner />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

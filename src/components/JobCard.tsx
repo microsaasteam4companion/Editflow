@@ -22,7 +22,7 @@ const JobCard = ({ title, client, hours, priority, status, compact = false }: Jo
 
   const priorityBadgeStyles = {
     low: 'bg-success/10 text-success',
-    medium: 'bg-warning/10 text-warning-foreground',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
     high: 'bg-danger/10 text-danger',
   };
 
@@ -80,7 +80,7 @@ const JobCard = ({ title, client, hours, priority, status, compact = false }: Jo
         <h4 className="font-medium text-sm text-foreground leading-tight line-clamp-2">
           {title}
         </h4>
-        
+
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <User size={12} />
           <span className="text-xs truncate">{client}</span>
@@ -91,7 +91,7 @@ const JobCard = ({ title, client, hours, priority, status, compact = false }: Jo
             <Clock size={12} />
             <span className="text-xs">{hours}h</span>
           </div>
-          
+
           <div className="flex items-center gap-1.5">
             <span
               className={cn(

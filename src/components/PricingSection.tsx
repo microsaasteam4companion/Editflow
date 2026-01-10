@@ -1,5 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Check, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const plans = [
   {
@@ -44,12 +47,70 @@ const plans = [
       'Custom integrations',
       'Dedicated support',
     ],
-    cta: 'Contact Sales',
+    cta: 'Subscribe',
     highlighted: false,
   },
 ];
 
 const PricingSection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const startCheckout = async (plan: string) => {
+    try {
+      const res = await fetch("/api/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: plan,
+          email: user?.email,
+          name: user?.user_metadata?.full_name || user?.email // Fallback to email if name missing
+        })
+      });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        // This usually happens when Vite returns the HTML index page for a 404 API route
+        const text = await res.text();
+        console.error("API Error (Non-JSON response):", text.slice(0, 200));
+        throw new Error("API endpoint not working. Are you running with 'npx vercel dev'?");
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Checkout failed');
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to start checkout');
+      console.error(error);
+    }
+  };
+
+  const handlePlanClick = (planName: string) => {
+    const plan = planName.toLowerCase();
+
+    if (plan === 'starter') {
+      navigate(user ? '/planner' : '/auth');
+      return;
+    }
+
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (plan === 'pro') {
+      startCheckout('pro');
+    } else if (plan === 'agency') {
+      startCheckout('agency');
+    }
+  };
+
   return (
     <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
@@ -66,11 +127,10 @@ const PricingSection = () => {
           {plans.map((plan, index) => (
             <div
               key={index}
-              className={`relative rounded-2xl p-8 transition-all duration-300 flex flex-col ${
-                plan.highlighted
-                  ? 'bg-card border-2 border-primary shadow-glow-lg scale-105'
-                  : 'bg-card border border-border/50 shadow-soft hover:shadow-medium'
-              }`}
+              className={`relative rounded-2xl p-8 transition-all duration-300 flex flex-col ${plan.highlighted
+                ? 'bg-card border-2 border-primary shadow-glow-lg scale-105'
+                : 'bg-card border border-border/50 shadow-soft hover:shadow-medium'
+                }`}
             >
               {plan.highlighted && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-medium rounded-full">
@@ -97,11 +157,11 @@ const PricingSection = () => {
               </ul>
 
               <Button
-                className={`w-full gap-2 mt-auto ${
-                  plan.highlighted
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
+                onClick={() => handlePlanClick(plan.name)}
+                className={`w-full gap-2 mt-auto ${plan.highlighted
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}
               >
                 {plan.cta}
                 <ArrowRight size={16} />

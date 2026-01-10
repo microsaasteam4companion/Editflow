@@ -45,7 +45,7 @@ const DraggableJobCard = ({ id, index, title, clientName, hours, priority, statu
 
   const priorityBadgeStyles = {
     low: 'bg-success/10 text-success',
-    medium: 'bg-warning/10 text-warning-foreground',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
     high: 'bg-danger/10 text-danger',
   };
 
