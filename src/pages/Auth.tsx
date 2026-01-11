@@ -57,7 +57,15 @@ const Auth = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background px-4">
             <div className="w-full max-w-md space-y-8 bg-card p-8 rounded-xl border border-border/50 shadow-lg">
-                <div className="text-center">
+                <div className="text-center relative">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute -left-2 -top-2 h-8 w-8 text-muted-foreground"
+                        onClick={() => navigate('/')}
+                    >
+                        <ArrowLeft size={16} />
+                    </Button>
                     <h2 className="text-2xl font-bold text-foreground">
                         {isSignUp ? 'Create an account' : 'Welcome back'}
                     </h2>

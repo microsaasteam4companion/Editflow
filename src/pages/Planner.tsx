@@ -11,7 +11,8 @@ import {
   Users,
   LayoutGrid,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Menu
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -33,6 +34,7 @@ const Planner = () => {
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('planner');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
@@ -96,8 +98,19 @@ const Planner = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 border-r border-border/50 bg-card flex flex-col">
+      <aside className={cn(
+        "fixed md:relative w-64 md:w-56 h-full border-r border-border/50 bg-card flex flex-col transition-transform duration-300 z-50",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
         {/* Logo */}
         <div className="p-4 border-b border-border/30">
           <Link to="/" className="flex items-center gap-2">
@@ -112,9 +125,9 @@ const Planner = () => {
             Workspace
           </div>
           <button
-            onClick={() => setCurrentView('planner')}
+            onClick={() => { setCurrentView('planner'); setIsSidebarOpen(false); }}
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors text-left",
               currentView === 'planner'
                 ? "bg-secondary text-foreground font-medium"
                 : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -124,9 +137,9 @@ const Planner = () => {
             Weekly Planner
           </button>
           <button
-            onClick={() => setCurrentView('team')}
+            onClick={() => { setCurrentView('team'); setIsSidebarOpen(false); }}
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors text-left",
               currentView === 'team'
                 ? "bg-secondary text-foreground font-medium"
                 : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -136,9 +149,9 @@ const Planner = () => {
             Team
           </button>
           <button
-            onClick={() => setCurrentView('calendar')}
+            onClick={() => { setCurrentView('calendar'); setIsSidebarOpen(false); }}
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors text-left",
               currentView === 'calendar'
                 ? "bg-secondary text-foreground font-medium"
                 : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -172,11 +185,19 @@ const Planner = () => {
         )}
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-12 border-b border-border/30 bg-card flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
+        <header className="h-12 border-b border-border/30 bg-card flex items-center justify-between px-4 sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 md:hidden text-foreground hover:bg-secondary"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={18} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -196,128 +217,126 @@ const Planner = () => {
                 onClick={() => setIsNewJobModalOpen(true)}
               >
                 <Plus size={14} />
-                New Job
+                <span className="hidden sm:inline">New Job</span>
               </Button>
             )}
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="flex-1 p-4 overflow-auto">
+        {/* Content Wrapper */}
+        <main className="flex-1 overflow-auto p-2 sm:p-4">
           {currentView === 'planner' && (
-            <div className="bg-card rounded-xl border border-border/30 overflow-hidden max-w-6xl mx-auto">
-              {/* Planner Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={goToPreviousWeek}
-                    className="p-1 rounded hover:bg-secondary transition-colors"
-                  >
-                    <ChevronLeft size={16} className="text-muted-foreground" />
-                  </button>
-                  <div>
-                    <h2 className="text-sm font-semibold text-foreground">{getWeekLabel()}</h2>
-                    <p className="text-[11px] text-muted-foreground">{editors.length} editors · {currentWeekJobCount} jobs</p>
-                  </div>
-                  <button
-                    onClick={goToNextWeek}
-                    className="p-1 rounded hover:bg-secondary transition-colors"
-                  >
-                    <ChevronRight size={16} className="text-muted-foreground" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Availability</span>
-                    <Switch
-                      checked={showHeatmap}
-                      onCheckedChange={setShowHeatmap}
-                      className="data-[state=checked]:bg-primary scale-90"
-                    />
-                  </div>
-
-                  <Button
-                    variant={planType === 'pro' ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "gap-1.5 h-7 text-xs border-border",
-                      planType === 'pro' ? "bg-primary hover:bg-primary/90" : "hover:bg-secondary"
-                    )}
-                    onClick={() => {
-                      if (planType === 'pro') {
-                        toast.promise(optimizeWeekSchedule(), {
-                          loading: 'Optimizing schedule...',
-                          success: 'Optimization cycle complete',
-                          error: 'Failed to optimize'
-                        });
-                      } else {
-                        setIsPremiumModalOpen(true);
-                      }
-                    }}
-                  >
-                    <Sparkles size={12} className={planType === 'pro' ? "text-primary-foreground" : "text-primary"} />
-                    AI Optimize
-                    {planType !== 'pro' && (
-                      <span className="text-[9px] bg-gradient-to-r from-primary to-warning px-1 py-0.5 rounded text-primary-foreground font-medium flex items-center gap-0.5">
-                        <Lock size={8} />
-                        Pro
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Column Headers with actual dates */}
-              <div className="grid gap-1 px-3 py-2 bg-secondary/5 border-b border-border/20"
-                style={{ gridTemplateColumns: 'minmax(140px, 180px) repeat(7, 1fr)' }}>
-                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Editor
-                </div>
-                {dayLabels.map((label, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                      {label.day}
+            <div className="bg-card rounded-xl border border-border/30 overflow-hidden max-w-6xl mx-auto shadow-sm">
+              <div className="overflow-x-auto">
+                <div className="min-w-[800px]">
+                  {/* Planner Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={goToPreviousWeek}
+                        className="p-1 rounded hover:bg-secondary transition-colors"
+                      >
+                        <ChevronLeft size={16} className="text-muted-foreground" />
+                      </button>
+                      <div>
+                        <h2 className="text-sm font-semibold text-foreground">{getWeekLabel()}</h2>
+                        <p className="text-[11px] text-muted-foreground">{editors.length} editors · {currentWeekJobCount} jobs</p>
+                      </div>
+                      <button
+                        onClick={goToNextWeek}
+                        className="p-1 rounded hover:bg-secondary transition-colors"
+                      >
+                        <ChevronRight size={16} className="text-muted-foreground" />
+                      </button>
                     </div>
-                    <div className="text-[10px] text-foreground font-medium">
-                      {label.date}
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Availability</span>
+                        <Switch
+                          checked={showHeatmap}
+                          onCheckedChange={setShowHeatmap}
+                          className="data-[state=checked]:bg-primary scale-90"
+                        />
+                      </div>
+
+                      <Button
+                        variant={planType === 'pro' ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "gap-1.5 h-7 text-xs border-border",
+                          planType === 'pro' ? "bg-primary hover:bg-primary/90" : "hover:bg-secondary"
+                        )}
+                        onClick={() => {
+                          if (planType === 'pro') {
+                            toast.promise(optimizeWeekSchedule(), {
+                              loading: 'Optimizing schedule...',
+                              success: 'Optimization cycle complete',
+                              error: 'Failed to optimize'
+                            });
+                          } else {
+                            setIsPremiumModalOpen(true);
+                          }
+                        }}
+                      >
+                        <Sparkles size={12} className={planType === 'pro' ? "text-primary-foreground" : "text-primary"} />
+                        AI Optimize
+                        {planType !== 'pro' && (
+                          <span className="text-[9px] bg-gradient-to-r from-primary to-warning px-1 py-0.5 rounded text-primary-foreground font-medium flex items-center gap-0.5">
+                            <Lock size={8} />
+                            Pro
+                          </span>
+                        )}
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Editor Rows with Drag & Drop */}
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="px-3 py-2 space-y-1">
-                  {editors.map((editor) => (
-                    <EditorRowDraggable
-                      key={editor.id}
-                      id={editor.id}
-                      name={editor.name}
-                      capacity={getEditorCapacity(editor.id)}
-                      jobs={getEditorJobs(editor.id)}
-                      showHeatmap={showHeatmap}
-                      onDeleteJob={deleteJob}
-                      onUpdateJob={updateJob}
-                    />
-                  ))}
-                </div>
-              </DragDropContext>
+                  {/* Column Headers */}
+                  <div className="grid gap-1 px-3 py-2 bg-secondary/5 border-b border-border/20"
+                    style={{ gridTemplateColumns: 'minmax(140px, 180px) repeat(7, 1fr)' }}>
+                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Editor</div>
+                    {dayLabels.map((label, index) => (
+                      <div key={index} className="text-center">
+                        <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{label.day}</div>
+                        <div className="text-[10px] text-foreground font-medium">{label.date}</div>
+                      </div>
+                    ))}
+                  </div>
 
-              {/* Footer */}
-              <div className="px-4 py-2 border-t border-border/20 bg-secondary/5">
-                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-success" />
-                    Open
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-warning" />
-                    Near capacity
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-danger" />
-                    Overloaded
+                  {/* Editor Rows */}
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <div className="px-3 py-2 space-y-1">
+                      {editors.map((editor) => (
+                        <EditorRowDraggable
+                          key={editor.id}
+                          id={editor.id}
+                          name={editor.name}
+                          capacity={getEditorCapacity(editor.id)}
+                          jobs={getEditorJobs(editor.id)}
+                          showHeatmap={showHeatmap}
+                          onDeleteJob={deleteJob}
+                          onUpdateJob={updateJob}
+                        />
+                      ))}
+                    </div>
+                  </DragDropContext>
+
+                  {/* Footer Stats */}
+                  <div className="px-4 py-2 border-t border-border/20 bg-secondary/5">
+                    <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-success" />
+                        Open
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-warning" />
+                        Near capacity
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-danger" />
+                        Overloaded
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -332,7 +351,6 @@ const Planner = () => {
               />
             </div>
           )}
-
 
           {currentView === 'team' && (
             <TeamView
@@ -349,8 +367,6 @@ const Planner = () => {
           )}
         </main>
       </div>
-
-
 
       <PremiumModal isOpen={isPremiumModalOpen} onClose={() => setIsPremiumModalOpen(false)} />
       <NewJobModal

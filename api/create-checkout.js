@@ -11,8 +11,18 @@ export default async function handler(req, res) {
     }
 
     // Set CORS headers to allow requests from the frontend
+    const origin = req.headers.origin || '*';
+    const allowedOrigins = [
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
+        'http://localhost:3000',
+        'http://localhost:8080'
+    ].filter(Boolean);
+
+    if (allowedOrigins.includes(origin) || !process.env.VERCEL_URL) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
         'Access-Control-Allow-Headers',
@@ -24,23 +34,15 @@ export default async function handler(req, res) {
         return;
     }
 
-    if (req.method === 'GET') {
-        return res.status(200).json({
-            status: "API is alive",
-            config: {
-                has_api_key: !!process.env.DODO_PAYMENTS_API_KEY,
-                has_pro_id: !!process.env.DODO_PRO_PRODUCT_ID,
-                has_agency_id: !!process.env.DODO_AGENCY_PRODUCT_ID,
-                node_version: process.version
-            }
-        });
-    }
-
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { plan, email, name } = req.body || {};
+    let { plan, email, name } = req.body || {};
+
+    // Basic input sanitization
+    name = (name || '').toString().slice(0, 100).trim();
+    email = (email || '').toString().toLowerCase().trim();
 
     if (!plan || !email) {
         return res.status(400).json({ error: "Missing required fields: plan and email are required." });

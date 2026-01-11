@@ -124,12 +124,12 @@ const PricingSection = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {plans.map((plan, index) => (
             <div
               key={index}
               className={`relative rounded-2xl p-8 transition-all duration-300 flex flex-col ${plan.highlighted
-                ? 'bg-card border-2 border-primary shadow-glow-lg scale-105'
+                ? 'bg-card border-2 border-primary shadow-glow-lg md:scale-105 z-10'
                 : 'bg-card border border-border/50 shadow-soft hover:shadow-medium'
                 }`}
             >
