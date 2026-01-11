@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,8 +87,8 @@ const PricingSection = () => {
         window.location.href = data.checkoutUrl;
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to start checkout');
-      console.error(error);
+      console.error("Checkout Error Details:", error);
+      toast.error(error.message || 'Failed to start checkout. Check browser console for details.');
     }
   };
 

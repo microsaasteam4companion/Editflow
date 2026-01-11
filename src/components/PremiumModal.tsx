@@ -76,7 +76,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          14-day free trial · No credit card required
+          Join professional editors and agencies
         </p>
       </DialogContent>
     </Dialog>

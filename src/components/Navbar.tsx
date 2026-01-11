@@ -42,7 +42,7 @@ const Navbar = () => {
             </Link>
             <ThemeToggle />
             <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow">
-              <Link to="/planner">Start Free Trial</Link>
+              <Link to="/planner">Get Started</Link>
             </Button>
           </div>
 
@@ -72,7 +72,7 @@ const Navbar = () => {
                 Login
               </Link>
               <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow w-full">
-                <Link to="/planner">Start Free Trial</Link>
+                <Link to="/planner">Get Started</Link>
               </Button>
             </div>
           </div>
