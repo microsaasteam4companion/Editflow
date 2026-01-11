@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
     try {
         console.log("Sending request to Dodo Payments...");
-        const response = await fetch("https://test.dodopayments.com/checkouts", {
+        const response = await fetch("https://api.dodopayments.com/checkouts", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

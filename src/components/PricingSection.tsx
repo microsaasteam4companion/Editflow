@@ -31,7 +31,7 @@ const plans = [
       'Client management',
       'Priority support',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Subscribe Now',
     highlighted: true,
   },
   {
