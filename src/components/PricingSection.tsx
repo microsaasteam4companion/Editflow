@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +31,7 @@ const plans = [
       'Client management',
       'Priority support',
     ],
-    cta: 'Subscribe Now',
+    cta: 'Start Free Trial',
     highlighted: true,
   },
   {
@@ -58,34 +57,23 @@ const PricingSection = () => {
   const navigate = useNavigate();
 
   const startCheckout = async (plan: string) => {
-    const apiUrl = `${window.location.origin}/api/create-checkout`;
-    console.log("Initiating checkout with URL:", apiUrl);
-
     try {
-      if (!user?.email) {
-        toast.error("Please ensure you are logged in correctly.");
-        return;
-      }
-
-      const res = await fetch(apiUrl, {
+      const res = await fetch("/api/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan: plan,
           email: user?.email,
-          name: user?.user_metadata?.full_name || user?.email
+          name: user?.user_metadata?.full_name || user?.email // Fallback to email if name missing
         })
       });
 
-      console.log(`Checkout Response Status: ${res.status} ${res.statusText}`);
       const contentType = res.headers.get("content-type");
-      console.log("Response Content-Type:", contentType);
-
       if (!contentType || !contentType.includes("application/json")) {
+        // This usually happens when Vite returns the HTML index page for a 404 API route
         const text = await res.text();
-        console.error("API Error (Non-JSON response):", text.slice(0, 500));
-        toast.error(`Error 404: The API endpoint was not found. Please ensure you are using the correct deployment URL.`);
-        return;
+        console.error("API Error (Non-JSON response):", text.slice(0, 200));
+        throw new Error("API endpoint not working. Are you running with 'npx vercel dev'?");
       }
 
       const data = await res.json();
@@ -95,12 +83,11 @@ const PricingSection = () => {
       }
 
       if (data.checkoutUrl) {
-        console.log("Redirecting to:", data.checkoutUrl);
         window.location.href = data.checkoutUrl;
       }
     } catch (error: any) {
-      console.error("Checkout Error Details:", error);
-      toast.error(`Checkout Error: ${error.message}`);
+      toast.error(error.message || 'Failed to start checkout');
+      console.error(error);
     }
   };
 
@@ -136,12 +123,12 @@ const PricingSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           {plans.map((plan, index) => (
             <div
               key={index}
               className={`relative rounded-2xl p-8 transition-all duration-300 flex flex-col ${plan.highlighted
-                ? 'bg-card border-2 border-primary shadow-glow-lg md:scale-105 z-10'
+                ? 'bg-card border-2 border-primary shadow-glow-lg scale-105'
                 : 'bg-card border border-border/50 shadow-soft hover:shadow-medium'
                 }`}
             >
