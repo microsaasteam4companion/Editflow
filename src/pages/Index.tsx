@@ -8,6 +8,8 @@ import FAQSection from '@/components/FAQSection';
 import CTASection from '@/components/CTASection';
 import Footer from '@/components/Footer';
 import { SEOHead } from '@/components/SEOHead';
+import UpvoteWidget from '@/components/UpvoteWidget';
+import { useAuth } from '@/contexts/AuthContext';
 
 const faqSchema = {
   "@context": "https://schema.org",
@@ -58,6 +60,7 @@ const faqSchema = {
 
 const Index = () => {
   const { hash } = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (hash) {
@@ -88,6 +91,7 @@ const Index = () => {
         <CTASection />
       </main>
       <Footer />
+      <UpvoteWidget userId={user?.id} email={user?.email} />
     </div>
   );
 };
