@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { Job, Status } from '@/hooks/usePlannerData';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,17 +23,28 @@ export default function ClientView() {
 
         const fetchJob = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('jobs')
-                    .select('*, editors(name)')
-                    .eq('client_view_token', token)
-                    .single();
+                const jobsQuery = query(
+                    collection(db, 'jobs'),
+                    where('client_view_token', '==', token),
+                    limit(1)
+                );
+                const jobsSnap = await getDocs(jobsQuery);
 
-                if (error) throw error;
-                if (!data) throw new Error("Job not found");
+                if (jobsSnap.empty) throw new Error("Job not found");
+                
+                const jobDoc = jobsSnap.docs[0];
+                const data = jobDoc.data();
+                
+                let editorName = 'Unassigned';
+                if (data.editor_id) {
+                    const editorSnap = await getDoc(doc(db, 'editors', data.editor_id));
+                    if (editorSnap.exists()) {
+                        editorName = editorSnap.data().name;
+                    }
+                }
 
                 setJob({
-                    id: data.id,
+                    id: jobDoc.id,
                     title: data.title,
                     clientName: data.client_name,
                     editorId: data.editor_id,
@@ -44,9 +56,7 @@ export default function ClientView() {
                     order: data.order,
                     notes: data.notes,
                     deadline: data.deadline,
-                    // We can attach editor name loosely
-                    // @ts-ignore
-                    editorName: data.editors?.name
+                    editorName: editorName
                 });
             } catch (err: any) {
                 console.error("Error fetching job", err);
@@ -148,7 +158,7 @@ export default function ClientView() {
                                     <span>Editor</span>
                                 </div>
                                 <span className="font-medium text-sm">
-                                    {/* @ts-ignore */ job.editorName || 'Unassigned'}
+                                    {job.editorName || 'Unassigned'}
                                 </span>
                             </div>
                         </CardContent>

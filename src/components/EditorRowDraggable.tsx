@@ -37,7 +37,7 @@ const EditorRowDraggable = ({ id, name, capacity, dailyCapacity, jobs, showHeatm
   };
 
   return (
-    <div className="grid gap-2 min-h-[90px]" style={{ gridTemplateColumns: 'minmax(180px, 1fr) repeat(7, 1fr)' }}>
+    <div className="grid gap-3 min-h-[90px]" style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
       {/* Editor Info */}
       <div className="flex items-start gap-2 p-2 bg-secondary/30 rounded-lg">
         <div className="flex-1 min-w-0">

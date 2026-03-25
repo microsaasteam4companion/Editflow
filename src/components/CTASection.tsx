@@ -21,7 +21,7 @@ const CTASection = () => {
               Ready to Organize Your Team?
             </h2>
             <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-              Join 500+ agencies already using EditFlow to schedule their video projects with clarity.
+              Join agencies already using EditFlow to schedule their video projects with clarity.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-card text-foreground hover:bg-card/90 shadow-strong px-8 gap-2 h-12">
@@ -35,9 +35,6 @@ const CTASection = () => {
               </Button>
             </div>
 
-            <p className="mt-8 text-sm text-primary-foreground/70">
-              Questions? <a href="mailto:business@entrext.in" className="underline hover:text-white transition-colors">Contact Support: business@entrext.in</a>
-            </p>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,25 +40,18 @@ export default function ClientIntake() {
                 client_name: formData.clientName,
                 status: 'queued',
                 priority: 'medium',
-                editor_id: null, // Unassigned
-                scheduled_date: 0, // Default to Monday or logic placeholder
-                week_start: new Date().toISOString().split('T')[0], // Assign to current week? Or backlog doesn't care?
-                // Backlog jobs might check week_start, but unassigned usually ignores date. 
-                // We'll set it to current week Monday just in case.
+                editor_id: null,
+                scheduled_date: 0,
+                week_start: new Date().toISOString().split('T')[0],
                 estimated_hours: parseFloat(formData.estimatedHours) || 4,
                 notes: formData.description,
-                // Premium fields
                 raw_footage_url: formData.rawFootageUrl,
                 brand_assets_url: formData.brandAssetsUrl,
                 deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
+                created_at: serverTimestamp()
             };
 
-            const { error } = await supabase.from('jobs').insert(jobData);
-
-            if (error) {
-                console.error("Intake Error", error);
-                throw error;
-            }
+            await addDoc(collection(db, 'jobs'), jobData);
 
             setSuccess(true);
             toast.success("Request submitted successfully!");

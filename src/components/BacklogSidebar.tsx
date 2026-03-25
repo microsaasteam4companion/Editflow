@@ -13,9 +13,10 @@ interface BacklogSidebarProps {
     onUpgrade: () => void;
     onDeleteJob: (id: string) => void;
     onUpdateJob: (id: string, updates: Partial<Job>) => void;
+    onJobClick?: (id: string) => void;
 }
 
-const BacklogSidebar = ({ jobs, isOpen, isPro, onToggle, onUpgrade, onDeleteJob, onUpdateJob }: BacklogSidebarProps) => {
+const BacklogSidebar = ({ jobs, isOpen, isPro, onToggle, onUpgrade, onDeleteJob, onUpdateJob, onJobClick }: BacklogSidebarProps) => {
     return (
         <div
             className={cn(
@@ -81,10 +82,14 @@ const BacklogSidebar = ({ jobs, isOpen, isPro, onToggle, onUpgrade, onDeleteJob,
                                                 priority={job.priority}
                                                 status={job.status}
                                                 notes={job.notes}
-                                                rawFootageUrl={job.rawFootageUrl}
-                                                brandAssetsUrl={job.brandAssetsUrl}
+                                                rawFootageUrl={job.footageUrl || job.rawFootageUrl}
+                                                brandAssetsUrl={job.assetsUrl || job.brandAssetsUrl}
+                                                revisionCount={job.revisionCount}
+                                                deadline={job.deadline}
+                                                referenceLinks={job.referenceLinks}
                                                 onDelete={onDeleteJob}
                                                 onUpdateJob={onUpdateJob}
+                                                onClick={() => onJobClick?.(job.id)}
                                             />
                                         ))}
                                         {provided.placeholder}

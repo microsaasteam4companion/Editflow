@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import { cn } from '@/lib/utils';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -18,8 +19,10 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'glass-nav shadow-soft' : 'bg-transparent'
-        }`}
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        isScrolled || isMobileMenuOpen ? "glass-nav shadow-soft" : "bg-transparent"
+      )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -63,23 +66,41 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
-            <div className="flex flex-col gap-4">
-              <a href="/#features" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2">
+          <div className="md:hidden py-6 border-t border-border/50 animate-fade-in bg-card/95 backdrop-blur-md min-h-[calc(100vh-4rem)]">
+            <div className="flex flex-col gap-6 px-2">
+              <a 
+                href="/#features" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-semibold text-foreground hover:text-primary transition-colors py-2 border-b border-border/10"
+              >
                 Features
               </a>
-              <a href="/#pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2">
+              <a 
+                href="/#pricing" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-semibold text-foreground hover:text-primary transition-colors py-2 border-b border-border/10"
+              >
                 Pricing
               </a>
-              <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2 text-left">
+              <Link 
+                to="/blog" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-semibold text-foreground hover:text-primary transition-colors py-2 border-b border-border/10"
+              >
                 Blog
               </Link>
-              <Link to="/auth" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2 text-left">
+              <Link 
+                to="/auth" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-semibold text-foreground hover:text-primary transition-colors py-2 border-b border-border/10"
+              >
                 Login
               </Link>
-              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow w-full">
-                <Link to="/planner">Start Free Trial</Link>
-              </Button>
+              <div className="pt-4">
+                <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow w-full h-12 text-base font-bold">
+                  <Link to="/planner" onClick={() => setIsMobileMenuOpen(false)}>Start Free Trial</Link>
+                </Button>
+              </div>
             </div>
           </div>
         )}

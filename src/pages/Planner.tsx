@@ -12,7 +12,10 @@ import {
   Users,
   LayoutGrid,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Menu,
+  X,
+  BarChart3
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -29,8 +32,10 @@ import { toast } from 'sonner';
 import BacklogSidebar from '@/components/BacklogSidebar';
 import JobDetailsModal from '@/components/JobDetailsModal';
 import { Job } from '@/hooks/usePlannerData';
+import AICoPlanner from '@/components/AICoPlanner';
+import AnalyticsView from '@/components/AnalyticsView';
 
-type View = 'planner' | 'calendar' | 'team';
+type View = 'planner' | 'calendar' | 'team' | 'analytics';
 
 const Planner = () => {
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -38,7 +43,8 @@ const Planner = () => {
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('planner');
   const [isBacklogOpen, setIsBacklogOpen] = useState(true);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
@@ -147,8 +153,7 @@ const Planner = () => {
   // Re-destructure check - done
 
   const handleJobClick = (jobId: string) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (job) setSelectedJob(job);
+    setSelectedJobId(jobId);
   };
 
   return (
@@ -157,14 +162,31 @@ const Planner = () => {
         title="Planner Board | Editor Flow"
         noIndex={true}
       />
-      {/* Sidebar */}
-      <aside className="w-56 border-r border-border/50 bg-card flex flex-col">
-        {/* Logo */}
-        <div className="p-4 border-b border-border/30">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 lg:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Mobile & Desktop */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 border-r border-border/50 bg-card flex flex-col transition-transform duration-300 transform lg:relative lg:translate-x-0 lg:w-56",
+        isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {/* Logo & Close Button */}
+        <div className="p-4 border-b border-border/30 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="EditFlow logo" className="h-8 w-auto object-contain flex-shrink-0 rounded-xl" />
             <span className="font-semibold text-foreground">EditFlow</span>
           </Link>
+          <button 
+            className="lg:hidden p-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -173,7 +195,10 @@ const Planner = () => {
             Workspace
           </div>
           <button
-            onClick={() => setCurrentView('planner')}
+            onClick={() => {
+              setCurrentView('planner');
+              setIsMobileSidebarOpen(false);
+            }}
             className={cn(
               "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
               currentView === 'planner'
@@ -185,7 +210,10 @@ const Planner = () => {
             Weekly Planner
           </button>
           <button
-            onClick={() => setCurrentView('team')}
+            onClick={() => {
+              setCurrentView('team');
+              setIsMobileSidebarOpen(false);
+            }}
             className={cn(
               "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
               currentView === 'team'
@@ -197,7 +225,10 @@ const Planner = () => {
             Team
           </button>
           <button
-            onClick={() => setCurrentView('calendar')}
+            onClick={() => {
+              setCurrentView('calendar');
+              setIsMobileSidebarOpen(false);
+            }}
             className={cn(
               "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
               currentView === 'calendar'
@@ -207,6 +238,21 @@ const Planner = () => {
           >
             <Calendar size={16} />
             Calendar
+          </button>
+          <button
+            onClick={() => {
+              setCurrentView('analytics');
+              setIsMobileSidebarOpen(false);
+            }}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+              currentView === 'analytics'
+                ? "bg-secondary text-foreground font-medium"
+                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+            )}
+          >
+            <BarChart3 size={16} />
+            Analytics
           </button>
         </nav>
 
@@ -236,9 +282,17 @@ const Planner = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-12 border-b border-border/30 bg-card flex items-center justify-between px-4">
+        <header className="h-12 border-b border-border/30 bg-card flex items-center justify-between px-4 sticky top-0 z-40">
           <div className="flex items-center gap-3">
-            {/* breadcrumbs or title */}
+            <button 
+              className="lg:hidden p-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setIsMobileSidebarOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="text-sm font-semibold truncate lg:hidden">
+              {currentView === 'planner' ? 'Planner' : currentView === 'team' ? 'Team' : 'Calendar'}
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -259,11 +313,11 @@ const Planner = () => {
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex-1 flex overflow-hidden">
 
-            <main className="flex-1 p-4 overflow-auto min-w-0">
+            <main className="flex-1 p-2 sm:p-4 overflow-hidden min-w-0">
               {currentView === 'planner' && (
-                <div className="bg-card rounded-xl border border-border/30 overflow-hidden max-w-6xl mx-auto">
+                <div className="bg-card rounded-xl border border-border/30 overflow-hidden max-w-6xl mx-auto flex flex-col">
                   {/* Planner Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-3 border-b border-border/30 gap-3">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={goToPreviousWeek}
@@ -326,40 +380,45 @@ const Planner = () => {
                     </div>
                   </div>
 
-                  {/* Column Headers with actual dates */}
-                  <div className="grid gap-1 px-3 py-2 bg-secondary/5 border-b border-border/20"
-                    style={{ gridTemplateColumns: 'minmax(140px, 180px) repeat(7, 1fr)' }}>
-                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                      Editor
-                    </div>
-                    {dayLabels.map((label, index) => (
-                      <div key={index} className="text-center">
-                        <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                          {label.day}
+                  {/* Scrollable Container for the Grid */}
+                  <div className="overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
+                    <div className="min-w-[800px]">
+                      {/* Column Headers with actual dates */}
+                      <div className="grid gap-3 px-3 py-2 bg-secondary/5 border-b border-border/20 sticky top-0 z-10"
+                        style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider sticky left-0 bg-[#f8f9fa] dark:bg-[#1a1c1e] z-30 px-2">
+                          Editor
                         </div>
-                        <div className="text-[10px] text-foreground font-medium">
-                          {label.date}
-                        </div>
+                        {dayLabels.map((label, index) => (
+                          <div key={index} className="text-center">
+                            <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+                              {label.day}
+                            </div>
+                            <div className="text-[10px] text-foreground font-medium">
+                              {label.date}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
 
-                  {/* Editor Rows with Drag & Drop */}
-                  <div className="px-3 py-2 space-y-1">
-                    {editors.map((editor) => (
-                      <EditorRowDraggable
-                        key={editor.id}
-                        id={editor.id}
-                        name={editor.name}
-                        capacity={getEditorCapacity(editor.id)}
-                        dailyCapacity={editor.dailyCapacityHours}
-                        jobs={getEditorJobs(editor.id)}
-                        showHeatmap={showHeatmap}
-                        onDeleteJob={deleteJob}
-                        onUpdateJob={updateJob}
-                        onJobClick={handleJobClick}
-                      />
-                    ))}
+                      {/* Editor Rows with Drag & Drop */}
+                      <div className="px-3 py-2 space-y-1">
+                        {editors.map((editor) => (
+                          <EditorRowDraggable
+                            key={editor.id}
+                            id={editor.id}
+                            name={editor.name}
+                            capacity={getEditorCapacity(editor.id)}
+                            dailyCapacity={editor.dailyCapacityHours}
+                            jobs={getEditorJobs(editor.id)}
+                            showHeatmap={showHeatmap}
+                            onDeleteJob={deleteJob}
+                            onUpdateJob={updateJob}
+                            onJobClick={handleJobClick}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Footer */}
@@ -383,10 +442,17 @@ const Planner = () => {
               )}
 
               {/* Other Views... */}
+              {currentView === 'analytics' && (
+                <div className="w-full max-w-4xl mx-auto">
+                  <AnalyticsView jobs={jobs} editors={editors} />
+                </div>
+              )}
+
               {currentView === 'calendar' && (
-                <div className="w-full max-w-4xl mx-auto py-2">
+                <div className="w-full max-w-6xl mx-auto py-2 h-full flex flex-col">
                   <MonthlyCalendar
-                    getJobCountForDate={getJobCountForDate}
+                    jobs={jobs}
+                    editors={editors}
                     onDayClick={handleDayClick}
                   />
                 </div>
@@ -418,6 +484,7 @@ const Planner = () => {
                 onUpgrade={() => setIsPremiumModalOpen(true)}
                 onDeleteJob={deleteJob}
                 onUpdateJob={updateJob}
+                onJobClick={handleJobClick}
               />
             )}
           </div>
@@ -432,17 +499,26 @@ const Planner = () => {
         onSubmit={addJob}
       />
 
-      {selectedJob && (
+      {selectedJobId && (
         <JobDetailsModal
-          job={selectedJob}
-          isOpen={!!selectedJob}
-          onClose={() => setSelectedJob(null)}
+          job={jobs.find(j => j.id === selectedJobId) || null}
+          isOpen={!!selectedJobId}
+          onClose={() => setSelectedJobId(null)}
           isPro={planType === 'pro'}
           onUpgrade={() => setIsPremiumModalOpen(true)}
+          onUpdateJob={updateJob}
+          editors={editors}
+          jobs={jobs}
         />
       )}
 
 
+      <AICoPlanner 
+        editors={editors} 
+        jobs={jobs} 
+        planType={planType} 
+        onUpgrade={() => setIsPremiumModalOpen(true)} 
+      />
     </div>
   );
 };

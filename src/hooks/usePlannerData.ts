@@ -1,7 +1,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { startOfWeek, addWeeks, format, addDays } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebase';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  deleteDoc, 
+  orderBy,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -23,12 +37,18 @@ export interface Job {
   // Premium fields
   rawFootageUrl?: string;
   brandAssetsUrl?: string;
+  previewUrl?: string;
   clientViewToken?: string;
   deadline?: string;
   // Phase 2 Fields
   startedAt?: string;
   completedAt?: string;
   actualHours?: number;
+  revisionCount?: number;
+  projectBrief?: string;
+  footageUrl?: string;
+  assetsUrl?: string;
+  referenceLinks?: string;
 }
 
 export interface Editor {
@@ -64,77 +84,86 @@ export const usePlannerData = () => {
       setLoading(true);
 
       // Fetch Profile Plan
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('plan_type')
-        .eq('id', user.id)
-        .single();
-
-      if (profileData) {
-        setPlanType(profileData.plan_type as 'free' | 'pro');
+      console.log('[usePlannerData] Fetching profile for UID:', user.uid);
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        const rawType = profileSnap.data().plan_type;
+        console.log('[usePlannerData] Profile found. DB plan_type:', rawType);
+        const type = (rawType || 'free').toString().toLowerCase().trim();
+        setPlanType(type === 'pro' ? 'pro' : 'free');
+      } else {
+        console.log('[usePlannerData] No profile found in "profiles" collection for UID:', user.uid);
       }
 
       // Fetch Editors
-      const { data: editorsData, error: editorsError } = await supabase
-        .from('editors')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (editorsError) throw editorsError;
-
-      const formattedEditors: Editor[] = editorsData.map((e: any) => ({
-        id: e.id,
-        name: e.name,
-        weeklyCapacity: e.weekly_capacity,
-        dailyCapacityHours: e.daily_capacity_hours || 8, // Default 8 if missing
-      }));
+      const editorsQuery = query(
+        collection(db, 'editors'), 
+        where('user_id', '==', user.uid)
+      );
+      const editorsSnap = await getDocs(editorsQuery);
+      
+      const formattedEditors: Editor[] = editorsSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          weeklyCapacity: data.weekly_capacity,
+          dailyCapacityHours: data.daily_capacity_hours || 8,
+        };
+      });
+      
       setEditors(formattedEditors);
 
-      // Parallel Fetch Strategy
-      // 1. Fetch ALL jobs
-      const { data: jobsData, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*');
+      // Fetch Jobs
+      const jobsQuery = query(
+        collection(db, 'jobs'),
+        where('user_id', '==', user.uid)
+      );
+      const jobsSnap = await getDocs(jobsQuery);
 
-      if (jobsError) throw jobsError;
-
-      // 2. Fetch ALL notes for these jobs (if table exists)
+      // Fetch Notes
+      const notesQuery = query(
+        collection(db, 'job_notes'),
+        where('user_id', '==', user.uid)
+      );
+      const notesSnap = await getDocs(notesQuery);
       let notesMap: Record<string, string> = {};
-      try {
-        const { data: notesData, error: notesError } = await supabase
-          .from('job_notes')
-          .select('job_id, content');
+      notesSnap.forEach(doc => {
+        notesMap[doc.data().job_id] = doc.data().content;
+      });
 
-        if (!notesError && notesData) {
-          notesData.forEach((n: any) => {
-            notesMap[n.job_id] = n.content;
-          });
-        }
-      } catch (e) {
-        console.warn("Could not fetch from job_notes table", e);
-      }
-
-      // 3. Merge data
-      const formattedJobs: Job[] = jobsData.map((j: any) => ({
-        id: j.id,
-        title: j.title,
-        clientName: j.client_name,
-        editorId: j.editor_id, // can be null
-        scheduledDate: j.scheduled_date,
-        weekStart: j.week_start,
-        estimatedHours: j.estimated_hours || 0,
-        priority: j.priority,
-        status: j.status,
-        order: j.order,
-        notes: notesMap[j.id] || j.notes || '',
-        rawFootageUrl: j.raw_footage_url,
-        brandAssetsUrl: j.brand_assets_url,
-        clientViewToken: j.client_view_token,
-        deadline: j.deadline,
-        startedAt: j.started_at,
-        completedAt: j.completed_at,
-        actualHours: j.actual_hours,
-      }));
+      // Merge data
+      const formattedJobs: Job[] = jobsSnap.docs.map(doc => {
+        const j = doc.data();
+        return {
+          id: doc.id,
+          title: j.title,
+          clientName: j.client_name,
+          editorId: j.editor_id,
+          scheduledDate: j.scheduled_date,
+          weekStart: j.week_start,
+          estimatedHours: j.estimated_hours || 0,
+          priority: j.priority,
+          status: j.status,
+          order: j.order,
+          notes: notesMap[doc.id] || j.notes || '',
+          rawFootageUrl: j.raw_footage_url,
+          brandAssetsUrl: j.brand_assets_url,
+          previewUrl: j.preview_url,
+          clientViewToken: j.client_view_token,
+          deadline: j.deadline,
+          startedAt: j.started_at,
+          completedAt: j.completed_at,
+          actualHours: j.actual_hours,
+          revisionCount: j.revision_count || 0,
+          projectBrief: j.project_brief || '',
+          footageUrl: j.footage_url || j.raw_footage_url || '',
+          assetsUrl: j.assets_url || j.brand_assets_url || '',
+          referenceLinks: j.reference_links || '',
+        };
+      });
 
       setJobs(formattedJobs);
     } catch (error: any) {
@@ -222,11 +251,9 @@ export const usePlannerData = () => {
 
       // Persist to DB
       for (const update of updates) {
-        const { error } = await supabase
-          .from('jobs')
-          .update({ editor_id: update.editor_id })
-          .eq('id', update.id);
-        if (error) console.error("Failed to save optimization move", error);
+        await updateDoc(doc(db, 'jobs', update.id), {
+          editor_id: update.editor_id
+        });
       }
     } else {
       toast.info("Schedule is already balanced!");
@@ -236,7 +263,7 @@ export const usePlannerData = () => {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
   // Week navigation
   const goToPreviousWeek = useCallback(() => {
@@ -268,9 +295,7 @@ export const usePlannerData = () => {
       return `Week of ${startMonth} ${startDay}–${endDay}, ${year}`;
     }
     return `Week of ${startMonth} ${startDay} – ${endMonth} ${endDay}, ${year}`;
-  }, [currentWeekStart]);
-
-  // Mutations
+  }, [currentWeekStart]);  // Mutations
   const addJob = useCallback(async (job: Omit<Job, 'id' | 'order' | 'weekStart'>) => {
     if (!user) return;
     try {
@@ -281,7 +306,7 @@ export const usePlannerData = () => {
       ).length;
 
       const dbJob = {
-        user_id: user.id,
+        user_id: user.uid,
         editor_id: job.editorId,
         title: job.title,
         client_name: job.clientName,
@@ -291,52 +316,52 @@ export const usePlannerData = () => {
         priority: job.priority,
         status: job.status,
         order: newJobOrder,
-        raw_footage_url: job.rawFootageUrl,
-        brand_assets_url: job.brandAssetsUrl,
-        deadline: job.deadline,
+        raw_footage_url: job.rawFootageUrl || null,
+        brand_assets_url: job.brandAssetsUrl || null,
+        preview_url: job.previewUrl || null,
+        client_view_token: job.previewUrl ? (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)) : null,
+        deadline: job.deadline || null,
+        revision_count: 0,
+        project_brief: job.projectBrief || null,
+        footage_url: job.footageUrl || null,
+        assets_url: job.assetsUrl || null,
+        reference_links: job.referenceLinks || null,
+        created_at: serverTimestamp()
       };
 
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .insert(dbJob)
-        .select()
-        .single();
+      const docRef = await addDoc(collection(db, 'jobs'), dbJob);
 
-      if (jobError) throw jobError;
-
-      // Try adding note to table
+      // Add note
       if (job.notes) {
-        try {
-          const { error: noteError } = await supabase
-            .from('job_notes')
-            .insert({
-              job_id: jobData.id,
-              user_id: user.id,
-              content: job.notes
-            });
-          if (noteError) throw noteError;
-        } catch (noteErr) {
-          console.warn("Note table save failed, trying column fallback...", noteErr);
-          // Fallback to updating column if table save failed
-          await supabase.from('jobs').update({ notes: job.notes }).eq('id', jobData.id);
-        }
+        await addDoc(collection(db, 'job_notes'), {
+          job_id: docRef.id,
+          user_id: user.uid,
+          content: job.notes,
+          updated_at: serverTimestamp()
+        });
       }
 
       const newJob: Job = {
-        id: jobData.id,
-        title: jobData.title,
-        clientName: jobData.client_name,
-        editorId: jobData.editor_id,
-        scheduledDate: jobData.scheduled_date,
-        weekStart: jobData.week_start,
-        estimatedHours: jobData.estimated_hours,
-        priority: jobData.priority,
-        status: jobData.status,
-        order: jobData.order,
+        id: docRef.id,
+        title: job.title,
+        clientName: job.clientName,
+        editorId: job.editorId,
+        scheduledDate: job.scheduledDate,
+        weekStart: currentWeekStartStr,
+        estimatedHours: job.estimatedHours,
+        priority: job.priority,
+        status: job.status,
+        order: newJobOrder,
         notes: job.notes || '',
         rawFootageUrl: job.rawFootageUrl,
         brandAssetsUrl: job.brandAssetsUrl,
+        previewUrl: job.previewUrl,
         deadline: job.deadline,
+        revisionCount: 0,
+        projectBrief: job.projectBrief || '',
+        footageUrl: job.footageUrl || '',
+        assetsUrl: job.assetsUrl || '',
+        referenceLinks: job.referenceLinks || '',
       };
 
       setJobs(prev => [...prev, newJob]);
@@ -358,7 +383,7 @@ export const usePlannerData = () => {
       const dbUpdates: any = {};
       if (updates.title) dbUpdates.title = updates.title;
       if (updates.clientName) dbUpdates.client_name = updates.clientName;
-      if (updates.editorId) dbUpdates.editor_id = updates.editorId;
+      if (updates.editorId !== undefined) dbUpdates.editor_id = updates.editorId;
       if (updates.scheduledDate !== undefined) dbUpdates.scheduled_date = updates.scheduledDate;
       if (updates.estimatedHours !== undefined) dbUpdates.estimated_hours = updates.estimatedHours;
       if (updates.priority) dbUpdates.priority = updates.priority;
@@ -367,106 +392,82 @@ export const usePlannerData = () => {
       if (updates.weekStart) dbUpdates.week_start = updates.weekStart;
       if (updates.rawFootageUrl !== undefined) dbUpdates.raw_footage_url = updates.rawFootageUrl;
       if (updates.brandAssetsUrl !== undefined) dbUpdates.brand_assets_url = updates.brandAssetsUrl;
+      if (updates.previewUrl !== undefined) dbUpdates.preview_url = updates.previewUrl;
+      if ((updates as any).clientViewToken) dbUpdates.client_view_token = (updates as any).clientViewToken;
       if (updates.deadline !== undefined) dbUpdates.deadline = updates.deadline;
+      if (updates.revisionCount !== undefined) dbUpdates.revision_count = updates.revisionCount;
+      if (updates.projectBrief !== undefined) dbUpdates.project_brief = updates.projectBrief;
+      if (updates.footageUrl !== undefined) dbUpdates.footage_url = updates.footageUrl;
+      if (updates.assetsUrl !== undefined) dbUpdates.assets_url = updates.assetsUrl;
+      if (updates.referenceLinks !== undefined) dbUpdates.reference_links = updates.referenceLinks;
 
       // Phase 2: Time Tracking Logic
       if (updates.status) {
         const now = new Date().toISOString();
         const currentJob = jobs.find(j => j.id === jobId);
 
-        // Transition to In Progress -> Set startedAt
         if (updates.status === 'in-progress') {
           if (currentJob && !currentJob.startedAt) {
             dbUpdates.started_at = now;
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, startedAt: now, status: updates.status! } : j));
           }
         }
 
-        // Transition to Review or Approved -> Set completedAt and Actual Hours
         if ((updates.status === 'review' || updates.status === 'approved' || updates.status === 'revision') && currentJob) {
-          // Only finalize if moving from In Progress or Queued (not just shuffling between Review/Approved)
-          // Or just always update finished time if it's the latest?
-          // Requirement: "When job status changes to Review or Approved: Set completed_at"
-          // Let's set it.
           dbUpdates.completed_at = now;
-
-          // Calculate actual_hours
-          // Rule: completed_at - started_at
-          // If started_at is missing, maybe assume job creation time? No, that's bad.
-          // If missing, use estimated or 0? 
-          // Better: If startedAt exists, calc diff.
           const startT = currentJob.startedAt ? new Date(currentJob.startedAt).getTime() : 0;
           if (startT > 0) {
             const endT = new Date(now).getTime();
-            const diffHours = Math.max(0, (endT - startT) / (1000 * 60 * 60)); // hours
-            // Round to 1 decimal
+            const diffHours = Math.max(0, (endT - startT) / (1000 * 60 * 60));
             const actual = Math.round(diffHours * 10) / 10;
             dbUpdates.actual_hours = actual;
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, completedAt: now, actualHours: actual, status: updates.status! } : j));
-          } else {
-            // Just Set Completed At
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, completedAt: now, status: updates.status! } : j));
           }
+        }
+
+        // Phase 1: Revision Counter Logic
+        if (updates.status === 'revision' && currentJob && currentJob.status !== 'revision') {
+          const nextCount = (currentJob.revisionCount || 0) + 1;
+          dbUpdates.revision_count = nextCount;
+          // Also update the local state correctly
+          (updates as any).revisionCount = nextCount;
         }
       }
 
       if (Object.keys(dbUpdates).length > 0) {
-        const { error } = await supabase
-          .from('jobs')
-          .update(dbUpdates)
-          .eq('id', jobId);
-        if (error) throw error;
+        await updateDoc(doc(db, 'jobs', jobId), dbUpdates);
       }
 
-      // Phase 2: Status History Recording (Fire and Forget)
+      // Status History
       if (updates.status) {
         const currentJob = jobs.find(j => j.id === jobId);
-        supabase.from('job_status_history').insert({
+        await addDoc(collection(db, 'job_status_history'), {
           job_id: jobId,
           old_status: currentJob?.status,
           new_status: updates.status,
-          changed_by: user?.id
-        }).then(({ error }) => {
-          if (error) console.error("Failed to log status history", error);
+          changed_by: user?.uid,
+          changed_at: serverTimestamp()
         });
       }
 
       // Handle Note Updates
       if (updates.notes !== undefined) {
-        try {
-          const { data: existingNote } = await supabase
-            .from('job_notes')
-            .select('id')
-            .eq('job_id', jobId)
-            .single();
+        const notesQuery = query(
+          collection(db, 'job_notes'),
+          where('job_id', '==', jobId)
+        );
+        const notesSnap = await getDocs(notesQuery);
 
-          if (existingNote) {
-            await supabase
-              .from('job_notes')
-              .update({ content: updates.notes, updated_at: new Date().toISOString() })
-              .eq('job_id', jobId);
-          } else {
-            const { error: insertError } = await supabase
-              .from('job_notes')
-              .insert({
-                job_id: jobId,
-                user_id: user?.id,
-                content: updates.notes
-              });
-            if (insertError) throw insertError;
-          }
-        } catch (noteErr) {
-          console.warn("Note table update failed, trying column fallback...", noteErr);
-          // Fallback to column
-          const { error: colError } = await supabase
-            .from('jobs')
-            .update({ notes: updates.notes })
-            .eq('id', jobId);
-
-          if (colError) {
-            console.error("Column fallback also failed", colError);
-            toast.error("Failed to save note. Please run the provided SQL migration script.");
-          }
+        if (!notesSnap.empty) {
+          await updateDoc(doc(db, 'job_notes', notesSnap.docs[0].id), {
+            content: updates.notes,
+            updated_at: serverTimestamp()
+          });
+        } else {
+          await addDoc(collection(db, 'job_notes'), {
+            job_id: jobId,
+            user_id: user?.uid,
+            content: updates.notes,
+            updated_at: serverTimestamp()
+          });
         }
       }
 
@@ -475,14 +476,20 @@ export const usePlannerData = () => {
       toast.error(`Failed to update job: ${error.message || 'Unknown error'}`);
       fetchData(); // Revert on error
     }
-  }, [fetchData, user]);
+  }, [fetchData, user, jobs]);
 
   const deleteJob = useCallback(async (jobId: string) => {
     try {
       setJobs(prev => prev.filter(job => job.id !== jobId));
-      // Cascade delete handles notes, just delete job
-      const { error } = await supabase.from('jobs').delete().eq('id', jobId);
-      if (error) throw error;
+      await deleteDoc(doc(db, 'jobs', jobId));
+      
+      // Delete notes too
+      const notesQuery = query(collection(db, 'job_notes'), where('job_id', '==', jobId));
+      const notesSnap = await getDocs(notesQuery);
+      for (const d of notesSnap.docs) {
+        await deleteDoc(d.ref);
+      }
+
       toast.success('Job deleted');
     } catch (error: any) {
       console.error('Error deleting job:', error);
@@ -500,12 +507,10 @@ export const usePlannerData = () => {
       const job = prev[jobIndex];
       const wasInSameCell = job.editorId === newEditorId && job.scheduledDate === newDayIndex;
 
-      // Update the moved job
       const updatedJobs = prev.map(j => {
         if (j.id === jobId) {
           return { ...j, editorId: newEditorId, scheduledDate: newDayIndex, order: newOrder };
         }
-        // Reorder
         if (j.editorId === newEditorId && j.scheduledDate === newDayIndex && j.weekStart === job.weekStart && j.id !== jobId) {
           if (wasInSameCell) {
             const oldOrder = job.order;
@@ -526,11 +531,11 @@ export const usePlannerData = () => {
 
       (async () => {
         try {
-          await supabase.from('jobs').update({
-            editor_id: newEditorId, // can be null
+          await updateDoc(doc(db, 'jobs', jobId), {
+            editor_id: newEditorId,
             scheduled_date: newDayIndex,
-            "order": newOrder
-          }).eq('id', jobId);
+            order: newOrder
+          });
         } catch (e) {
           console.error("Move job failed", e);
         }
@@ -544,11 +549,12 @@ export const usePlannerData = () => {
   const addEditor = useCallback(async (editor: Omit<Editor, 'id'>) => {
     if (!user) return;
     try {
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
       let planType = 'free';
-      try {
-        const { data: profile } = await supabase.from('profiles').select('plan_type').single();
-        if (profile) planType = profile.plan_type;
-      } catch (e) { }
+      if (profileSnap.exists()) {
+        planType = profileSnap.data().plan_type;
+      }
 
       const limit = planType === 'pro' ? 10 : 2;
 
@@ -557,20 +563,20 @@ export const usePlannerData = () => {
       }
 
       const dbEditor = {
-        user_id: user.id,
+        user_id: user.uid,
         name: editor.name,
         weekly_capacity: editor.weeklyCapacity,
-        daily_capacity_hours: editor.dailyCapacityHours || 8
+        daily_capacity_hours: editor.dailyCapacityHours || 8,
+        created_at: serverTimestamp()
       };
 
-      const { data, error } = await supabase.from('editors').insert(dbEditor).select().single();
-      if (error) throw error;
+      const docRef = await addDoc(collection(db, 'editors'), dbEditor);
 
       const newEditor: Editor = {
-        id: data.id,
-        name: data.name,
-        weeklyCapacity: data.weekly_capacity,
-        dailyCapacityHours: data.daily_capacity_hours || 8
+        id: docRef.id,
+        name: editor.name,
+        weeklyCapacity: editor.weeklyCapacity,
+        dailyCapacityHours: editor.dailyCapacityHours || 8
       };
 
       setEditors(prev => [...prev, newEditor]);
@@ -597,7 +603,7 @@ export const usePlannerData = () => {
       if (updates.weeklyCapacity) dbUpdates.weekly_capacity = updates.weeklyCapacity;
       if (updates.dailyCapacityHours) dbUpdates.daily_capacity_hours = updates.dailyCapacityHours;
 
-      await supabase.from('editors').update(dbUpdates).eq('id', editorId);
+      await updateDoc(doc(db, 'editors', editorId), dbUpdates);
     } catch (e) {
       console.error("Update editor failed", e);
       fetchData();
@@ -607,7 +613,7 @@ export const usePlannerData = () => {
   const deleteEditor = useCallback(async (editorId: string) => {
     setEditors(prev => prev.filter(editor => editor.id !== editorId));
     try {
-      await supabase.from('editors').delete().eq('id', editorId);
+      await deleteDoc(doc(db, 'editors', editorId));
       toast.success('Editor deleted');
     } catch (e) {
       console.error("Delete editor failed", e);
@@ -621,7 +627,11 @@ export const usePlannerData = () => {
     ));
 
     try {
-      await supabase.from('jobs').update({ editor_id: toEditorId }).eq('editor_id', fromEditorId);
+      const jobsQuery = query(collection(db, 'jobs'), where('editor_id', '==', fromEditorId));
+      const jobsSnap = await getDocs(jobsQuery);
+      for (const d of jobsSnap.docs) {
+        await updateDoc(d.ref, { editor_id: toEditorId });
+      }
     } catch (e) {
       console.error("Reassign failed", e);
       fetchData();

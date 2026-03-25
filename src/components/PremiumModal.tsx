@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Zap, BarChart3, Clock, Check } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PremiumModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ const features = [
 ];
 
 const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
+  const { user } = useAuth();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-card border-border/50 shadow-strong">
@@ -59,7 +62,7 @@ const PremiumModal = ({ isOpen, onClose }: PremiumModalProps) => {
           <Button
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow gap-2"
             onClick={() => {
-              window.location.href = '/#pricing';
+              window.location.href = `https://checkout.dodopayments.com/buy/pdt_0NVzju3irGibeJfcJew4B?quantity=1&customer_email=${encodeURIComponent(user?.email || '')}`;
               onClose();
             }}
           >

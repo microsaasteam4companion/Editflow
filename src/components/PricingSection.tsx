@@ -41,32 +41,8 @@ const PricingSection = () => {
 
   const startCheckout = async (plan: string) => {
     try {
-      const res = await fetch("/api/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: plan,
-          email: user?.email,
-          name: user?.user_metadata?.full_name || user?.email // Fallback to email if name missing
-        })
-      });
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        // This usually happens when Vite returns the HTML index page for a 404 API route
-        const text = await res.text();
-        console.error("API Error (Non-JSON response):", text.slice(0, 200));
-        throw new Error("API endpoint not working. Are you running with 'npx vercel dev'?");
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Checkout failed');
-      }
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+      if (plan === 'pro') {
+        window.location.href = `https://checkout.dodopayments.com/buy/pdt_0NVzju3irGibeJfcJew4B?quantity=1&customer_email=${encodeURIComponent(user?.email || '')}`;
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to start checkout');

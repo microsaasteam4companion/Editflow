@@ -20,7 +20,7 @@ interface NewJobModalProps {
     priority: Priority;
     status: Status;
     notes?: string;
-
+    previewUrl?: string;
   }) => void;
 }
 
@@ -43,6 +43,7 @@ const NewJobModal = ({ isOpen, onClose, editors, onSubmit }: NewJobModalProps) =
   const [priority, setPriority] = useState<Priority>('medium');
   const [status, setStatus] = useState<Status>('queued');
   const [notes, setNotes] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,7 +60,7 @@ const NewJobModal = ({ isOpen, onClose, editors, onSubmit }: NewJobModalProps) =
       priority,
       status,
       notes: notes.trim() || undefined,
-
+      previewUrl: previewUrl.trim() || undefined,
     });
 
     // Reset form
@@ -71,6 +72,7 @@ const NewJobModal = ({ isOpen, onClose, editors, onSubmit }: NewJobModalProps) =
     setPriority('medium');
     setStatus('queued');
     setNotes('');
+    setPreviewUrl('');
 
     onClose();
   };
@@ -189,7 +191,16 @@ const NewJobModal = ({ isOpen, onClose, editors, onSubmit }: NewJobModalProps) =
             </div>
           </div>
 
-
+          <div className="space-y-2">
+            <Label htmlFor="previewUrl" className="text-sm">Project Preview URL (Review Link)</Label>
+            <Input
+              id="previewUrl"
+              value={previewUrl}
+              onChange={(e) => setPreviewUrl(e.target.value)}
+              placeholder="e.g., https://youtube.com/... or https://myproject.com"
+              className="h-9"
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-sm">Notes (Optional)</Label>

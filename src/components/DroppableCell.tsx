@@ -42,8 +42,11 @@ const DroppableCell = ({ editorId, dayIndex, jobs, heatmapClass, infoText, onDel
                 priority={job.priority}
                 status={job.status}
                 notes={job.notes}
-                rawFootageUrl={job.rawFootageUrl}
-                brandAssetsUrl={job.brandAssetsUrl}
+                rawFootageUrl={job.footageUrl || job.rawFootageUrl}
+                brandAssetsUrl={job.assetsUrl || job.brandAssetsUrl}
+                revisionCount={job.revisionCount}
+                deadline={job.deadline}
+                referenceLinks={job.referenceLinks}
                 onDelete={onDeleteJob}
                 onUpdateJob={onUpdateJob}
                 onClick={() => onJobClick?.(job.id)}

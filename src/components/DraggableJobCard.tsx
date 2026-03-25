@@ -25,14 +25,17 @@ interface DraggableJobCardProps {
   priority: Priority;
   status: Status;
   notes?: string;
-  rawFootageUrl?: string; // New
-  brandAssetsUrl?: string; // New
+  rawFootageUrl?: string; 
+  brandAssetsUrl?: string;
+  revisionCount?: number;
+  deadline?: string;
+  referenceLinks?: string;
   onDelete?: (id: string) => void;
   onUpdateJob?: (id: string, updates: Partial<Job>) => void;
   onClick?: () => void;
 }
 
-const DraggableJobCard = ({ id, index, title, clientName, hours, priority, status, notes, rawFootageUrl, brandAssetsUrl, onDelete, onUpdateJob, onClick }: DraggableJobCardProps) => {
+const DraggableJobCard = ({ id, index, title, clientName, hours, priority, status, notes, rawFootageUrl, brandAssetsUrl, revisionCount, deadline, referenceLinks, onDelete, onUpdateJob, onClick }: DraggableJobCardProps) => {
   const [note, setNote] = useState(notes || '');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
 
@@ -69,6 +72,22 @@ const DraggableJobCard = ({ id, index, title, clientName, hours, priority, statu
 
   const hasNote = note.trim().length > 0;
 
+  // Deadline Logic
+  const getDeadlineStatus = () => {
+    if (!deadline) return null;
+    const now = new Date();
+    const dDate = new Date(deadline);
+    const diffMs = dDate.getTime() - now.getTime();
+    const diffHrs = diffMs / (1000 * 60 * 60);
+
+    if (diffHrs < 0) return 'overdue';
+    if (diffHrs <= 24) return 'critical';
+    if (diffHrs <= 48) return 'warning';
+    return 'normal';
+  };
+
+  const deadlineStatus = getDeadlineStatus();
+
   return (
     <Draggable draggableId={id} index={index}>
       {(provided, snapshot) => (
@@ -77,9 +96,12 @@ const DraggableJobCard = ({ id, index, title, clientName, hours, priority, statu
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           className={cn(
-            'group rounded-md p-2 bg-card border border-border/50 border-l-2 shadow-sm cursor-grab active:cursor-grabbing transition-shadow relative',
+            'group rounded-md p-2 bg-card border border-border/50 border-l-2 shadow-sm cursor-grab active:cursor-grabbing transition-all relative',
             priorityStyles[priority],
-            snapshot.isDragging && 'shadow-lg ring-2 ring-primary/20'
+            snapshot.isDragging && 'shadow-lg ring-2 ring-primary/20',
+            deadlineStatus === 'critical' && 'border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.2)] animate-pulse',
+            deadlineStatus === 'warning' && 'border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.2)]',
+            deadlineStatus === 'overdue' && 'bg-rose-500/10 border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
           )}
           onClick={onClick}
         >
@@ -149,16 +171,24 @@ const DraggableJobCard = ({ id, index, title, clientName, hours, priority, statu
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h4 className="font-medium text-[10px] text-foreground leading-tight line-clamp-1 pr-8 cursor-default">
+                  <h4 className="font-medium text-[10px] text-foreground leading-tight line-clamp-1 pr-12 cursor-default">
                     {title}
                   </h4>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-[200px]">
                   <p className="text-xs">{title}</p>
                   <p className="text-[10px] text-muted-foreground">{clientName}</p>
+                  {deadline && <p className="text-[9px] text-rose-400 mt-1 font-bold">Deadline: {deadline}</p>}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            {/* Revision Counter Badge */}
+            {(revisionCount || 0) > 0 && (
+                <div className="absolute top-[26px] right-2 flex items-center gap-1 bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-tighter">
+                   Rnd {revisionCount}
+                </div>
+            )}
 
             <div className="flex items-center justify-between gap-1 mt-1.5">
               <div className="flex items-center gap-2">

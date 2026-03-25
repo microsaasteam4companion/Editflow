@@ -29,12 +29,8 @@ const HeroSection = () => {
       <div className="max-w-7xl mx-auto">
         {/* Hero Content */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-foreground dark:bg-transparent dark:border dark:border-primary dark:text-primary text-sm font-medium mb-6 animate-fade-in">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            Now scheduling 500+ agencies
-          </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
             Plan Editor Work
             <br />
             <span className="text-primary">Without Chaos</span>

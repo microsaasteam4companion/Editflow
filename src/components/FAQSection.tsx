@@ -21,7 +21,7 @@ const faqs = [
 
     {
         question: "How secure is my data?",
-        answer: "We take security seriously. All your data is encrypted in transit and at rest. We use industry-standard authentication (Supabase) to ensure only your team can access your workspace."
+        answer: "We take security seriously. All your data is encrypted in transit and at rest. We use industry-standard authentication (Firebase) to ensure only your team can access your workspace."
     }
 ];
 
