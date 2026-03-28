@@ -1,5 +1,7 @@
 # Welcome to your Lovable project
 
+[![gitcgr](https://gitcgr.com/badge/microsaasteam4companion/Editflow.svg)](https://gitcgr.com/microsaasteam4companion/Editflow)
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
